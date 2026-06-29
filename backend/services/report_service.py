@@ -202,7 +202,7 @@ class ReportService:
                 wedgeprops={'width': 0.4, 'edgecolor': 'white', 'linewidth': 2},
                 textprops={'fontsize': 9, 'color': '#0f172a', 'weight': 'bold'}
             )
-            ax.set_title(f'Total Footprint: {grand_total:,.1f} tCO₂e', fontsize=12, pad=10, weight='bold', color='#0f172a')
+            ax.set_title(f'Total Footprint: {grand_total:,.1f} tCO$_2$e', fontsize=12, pad=10, weight='bold', color='#0f172a')
             plt.tight_layout()
             
             img_buffer = io.BytesIO()
@@ -288,7 +288,7 @@ class ReportService:
                     [m.split()[0] for m in months_list], 
                     rotation=45, ha='right', fontsize=9, color='#0f172a'
                 )
-                ax.set_ylabel('tCO₂e', fontsize=10, color='#0f172a', weight='bold')
+                ax.set_ylabel('tCO$_2$e', fontsize=10, color='#0f172a', weight='bold')
                 ax.legend(loc='upper left', fontsize=9, frameon=True, facecolor='white', edgecolor='#e2e8f0')
                 ax.grid(axis='y', linestyle='--', alpha=0.4, color='#cbd5e1')
                 ax.set_axisbelow(True)
@@ -326,7 +326,7 @@ class ReportService:
                 table_data: list[list[Any]] = [[
                     Paragraph('<b>Supplier Node</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold')),
                     Paragraph('<b>Sector</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold')),
-                    Paragraph('<b>Emissions (tCO₂e)</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2)),
+                    Paragraph('<b>Emissions (tCO<sub>2</sub>e)</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2)),
                     Paragraph('<b>% of Total</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2)),
                     Paragraph('<b>ESG Index</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2))
                 ]]
@@ -394,16 +394,16 @@ class ReportService:
             elements.append(Paragraph("Emission Factors Applied", h2))
             elements.append(Paragraph(
                 "Carbon intensities are derived using DEFRA 2023 Guidelines: "
-                "Road freight: 0.10621 kg CO₂e/tonne-km | "
-                "Air freight: 0.60210 kg CO₂e/tonne-km | "
-                "Sea freight: 0.01570 kg CO₂e/tonne-km | "
-                "Rail transit: 0.02750 kg CO₂e/tonne-km.", body))
+                "Road freight: 0.10621 kg CO<sub>2</sub>e/tonne-km | "
+                "Air freight: 0.60210 kg CO<sub>2</sub>e/tonne-km | "
+                "Sea freight: 0.01570 kg CO<sub>2</sub>e/tonne-km | "
+                "Rail transit: 0.02750 kg CO<sub>2</sub>e/tonne-km.", body))
             
             elements.append(Paragraph("Quality & Accuracy Metrics", h2))
             elements.append(Paragraph(
                 "Data consists of direct utility sync APIs, verified supplier declarations, "
                 "and ERP ledger exports. Total figures are represented in metric tonnes of "
-                "CO₂ equivalent (tCO₂e) using the IPCC Sixth Assessment Report (AR6) GWP100 values.", body))
+                "CO<sub>2</sub> equivalent (tCO<sub>2</sub>e) using the IPCC Sixth Assessment Report (AR6) GWP100 values.", body))
             
             elements.append(Paragraph("Report Limitations", h2))
             elements.append(Paragraph(
