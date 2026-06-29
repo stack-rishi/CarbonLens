@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { api } from "../lib/api";
-import { Leaf, Check, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { Leaf, Check, Eye, EyeOff, Loader2, ArrowRight, Zap } from "lucide-react";
 
 const SECTORS = ["Manufacturing","Logistics","Retail","Technology","Energy","Agriculture","Finance","Other"];
 const COUNTRIES = [
@@ -86,6 +86,25 @@ export default function Login() {
   const [siShowPw, setSiShowPw]     = useState(false);
   const [siError, setSiError]       = useState<string | null>(null);
   const [siLoading, setSiLoading]   = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleQuickDemo = async () => {
+    setTab("signin");
+    setSiEmail("admin@acmecorp.com");
+    setSiPassword("password123");
+    setSiError(null);
+    setDemoLoading(true);
+    try {
+      const res = await api.post("/auth/login", { email: "admin@acmecorp.com", password: "password123" });
+      login(res.data.access_token, res.data.user);
+      try {
+        const suppRes = await api.get("/suppliers");
+        navigate(!suppRes.data?.length ? "/onboarding" : "/dashboard");
+      } catch { navigate("/dashboard"); }
+    } catch (err: any) {
+      setSiError(err.response?.data?.detail || "Demo login failed. Make sure the backend is running and seeded.");
+    } finally { setDemoLoading(false); }
+  };
 
   // Register
   const [regCompany, setRegCompany] = useState("");
@@ -285,6 +304,32 @@ export default function Login() {
                   {siLoading
                     ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</>
                     : <> Sign In <ArrowRight className="h-4 w-4" /></>
+                  }
+                </button>
+
+                {/* Quick Demo Shortcut */}
+                <div className="relative flex items-center my-3">
+                  <div className="flex-1 h-px" style={{ background: "#d1e3d1" }} />
+                  <span className="px-3 text-xs" style={{ color: "#8a9b8a" }}>or</span>
+                  <div className="flex-1 h-px" style={{ background: "#d1e3d1" }} />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleQuickDemo}
+                  disabled={demoLoading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold transition-all"
+                  style={{
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, #152218, #1f3025)",
+                    color: "#6dc98a",
+                    border: "1px solid rgba(109,201,138,0.25)",
+                    opacity: demoLoading ? 0.75 : 1,
+                    cursor: demoLoading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {demoLoading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Launching demo…</>
+                    : <><Zap className="h-4 w-4" /> Quick Demo (Acme Corp Admin)</>
                   }
                 </button>
               </form>

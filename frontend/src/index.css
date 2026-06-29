@@ -315,14 +315,46 @@
 .animate-fade-in-up:nth-child(3) { animation-delay: 120ms; }
 .animate-fade-in-up:nth-child(4) { animation-delay: 180ms; }
 
+/* ─── SUPPLY CHAIN NODE ANIMATIONS ──────────────────────────────── */
+@keyframes node-glow-green {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(109,201,138,0.3), 0 0 12px rgba(45,122,79,0.15); }
+  50%      { box-shadow: 0 0 0 4px rgba(109,201,138,0.5), 0 0 20px rgba(45,122,79,0.3); }
+}
+@keyframes node-glow-red {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(220,38,38,0.25), 0 0 10px rgba(220,38,38,0.1); }
+  50%      { box-shadow: 0 0 0 3px rgba(220,38,38,0.45), 0 0 18px rgba(220,38,38,0.2); }
+}
+@keyframes node-glow-yellow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(234,179,8,0.25), 0 0 10px rgba(234,179,8,0.1); }
+  50%      { box-shadow: 0 0 0 3px rgba(234,179,8,0.45), 0 0 18px rgba(234,179,8,0.2); }
+}
+@keyframes node-float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-3px); }
+}
+
 /* ─── REACT FLOW OVERRIDES ───────────────────────────────────────── */
 .react-flow__node {
   border-radius: 16px !important;
   border: 1.5px solid rgba(255,255,255,0.10) !important;
-  transition: box-shadow 0.2s ease, transform 0.2s ease !important;
+  transition: box-shadow 0.25s ease, transform 0.25s ease !important;
 }
 .react-flow__node:hover {
   box-shadow: 0 0 0 2px rgba(45,122,79,0.40), 0 8px 24px rgba(0,0,0,0.3) !important;
+  transform: scale(1.04) !important;
+}
+.react-flow__node.selected {
+  animation: node-glow-green 2s ease-in-out infinite !important;
+  transform: scale(1.06) !important;
+}
+.react-flow__node.intensity-high {
+  animation: node-glow-red 2.5s ease-in-out infinite;
+}
+.react-flow__node.intensity-medium {
+  animation: node-glow-yellow 2.5s ease-in-out infinite;
+}
+.react-flow__node.intensity-low {
+  animation: node-float 4s ease-in-out infinite;
 }
 .react-flow__edge-path {
   stroke: #5a8a6a !important;

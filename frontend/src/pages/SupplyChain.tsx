@@ -135,7 +135,16 @@ function SupplyChainMapInner() {
 
   useEffect(() => {
     if (graphData) {
-      const initialNodes = graphData.nodes.map(n => ({ id: n.id, type: 'supplierNode', data: n, position: { x: 0, y: 0 } }));
+      const initialNodes = graphData.nodes.map(n => {
+        const intensityStr = n.intensity >= 0.66 ? 'high' : n.intensity >= 0.33 ? 'medium' : 'low';
+        return {
+          id: n.id,
+          type: 'supplierNode',
+          data: n,
+          position: { x: 0, y: 0 },
+          className: `intensity-${intensityStr}`
+        };
+      });
       const initialEdges = graphData.edges.map(e => ({ id: e.id, source: e.source, target: e.target, type: 'supplierEdge', animated: true, data: { transport_mode: e.transport_mode, weight_tonnes: e.weight_tonnes } }));
       const layouted = getLayoutedElements(initialNodes, initialEdges);
       setNodes(layouted.nodes); setEdges(layouted.edges);
