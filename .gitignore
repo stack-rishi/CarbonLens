@@ -1,0 +1,72 @@
+# --- CarbonLens ---
+
+# Environment
+.env
+.env.local
+.env.production
+.env.staging
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Generated reports
+backend/static/reports/*.pdf
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Logs
+*.log
+uvicorn.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp test scripts
+test_server*.py
+fix_mypy*.py
+fix_ruff*.py
+
+# Additional env patterns
+.env.*.local
+
+# Agent artifacts
+implementation_plan.md
+walkthrough.md
+task.md
+
+# One-off helper scripts
+audit_helper.py
+test_server_real_db.py
+hash_existing_passwords.py
+add_password_column.py
+
+# Generated PDFs (nested static dir)
+backend/backend/static/reports/*.pdf
+
+# Design docs (optional, not source code)
+DESIGN-claude.md
+DESIGN-meta.md
+stitch_sidebar.svg
+uvicorn.log

@@ -1,0 +1,59 @@
+# Stage 1: Build dependencies
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install system dependencies needed for building packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+ENV POETRY_VERSION=1.7.1
+ENV POETRY_HOME=/opt/poetry
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+ENV PATH="$POETRY_HOME/bin:$PATH"
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Copy dependency files
+COPY backend/pyproject.toml backend/poetry.lock* ./backend/
+
+# Install dependencies (without dev dependencies)
+WORKDIR /app/backend
+RUN poetry install --no-interaction --no-ansi --no-root --only main
+
+# Stage 2: Final runtime image
+FROM python:3.11-slim AS final
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
+# Copy virtual environment from builder
+COPY --from=builder /app/backend/.venv /app/backend/.venv
+
+# Copy source code and files
+COPY backend /app/backend
+
+# Create writable directories for reports
+RUN mkdir -p /app/backend/static/reports && chown -R appuser:appuser /app
+
+# Add virtual environment bin to PATH
+ENV PATH="/app/backend/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+
+EXPOSE 8080
+
+# Run as non-root user
+USER appuser
+
+# Run FastAPI via uvicorn
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080"]

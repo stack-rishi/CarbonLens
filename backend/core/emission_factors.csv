@@ -1,0 +1,15 @@
+category,item,value,unit
+transport,road,0.10621,kg CO2e/tonne-km
+transport,air,0.60210,kg CO2e/tonne-km
+transport,sea,0.01570,kg CO2e/tonne-km
+transport,rail,0.02750,kg CO2e/tonne-km
+energy,UK,0.20710,kg CO2e/kWh
+energy,IN,0.71000,kg CO2e/kWh
+energy,US,0.36800,kg CO2e/kWh
+energy,DE,0.35400,kg CO2e/kWh
+energy,CN,0.54000,kg CO2e/kWh
+material,steel,1.85000,kg CO2e/kg
+material,cement,0.92000,kg CO2e/kg
+material,plastic,2.50000,kg CO2e/kg
+material,paper,0.82000,kg CO2e/kg
+material,food,3.50000,kg CO2e/kg
