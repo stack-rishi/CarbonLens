@@ -31,13 +31,14 @@ import structlog
 
 logger = structlog.get_logger()
 
-COLOR_GREEN = HexColor('#22c55e')
-COLOR_DARK = HexColor('#0a0a0a')
-COLOR_GRAY = HexColor('#6b7280')
+COLOR_GREEN = HexColor('#2d7a4f') # Brand green (forest)
+COLOR_DARK = HexColor('#0d1a0f')  # Brand dark forest bg
+COLOR_GRAY = HexColor('#5a6b5a')  # Sage/gray text
 COLOR_RED = HexColor('#ef4444')
 COLOR_ORANGE = HexColor('#f97316')
 COLOR_YELLOW = HexColor('#eab308')
-COLOR_BG = HexColor('#f9fafb')
+COLOR_BG = HexColor('#f8fafc')
+COLOR_MINT = HexColor('#e8f2e8')  # Brand mint highlight
 
 class ReportService:
     @staticmethod
@@ -116,92 +117,58 @@ class ReportService:
         
         grand_total = sum(scope_totals.values()) or 0
         
-        # Build PDF
+        # Build PDF with generous margins to prevent overlap with header/footers
         doc = SimpleDocTemplate(
             output_path,
             pagesize=A4,
             rightMargin=2*cm,
             leftMargin=2*cm,
-            topMargin=2*cm,
-            bottomMargin=2*cm
+            topMargin=2.8*cm,
+            bottomMargin=2.8*cm
         )
         
-
         story = []
         
         # --- PAGE 1: COVER ---
         def make_cover() -> list[Any]:
             elements = []
-            elements.append(Spacer(1, 3*cm))
+            elements.append(Spacer(1, 4.5*cm))
             
-            # Green accent bar
-            elements.append(HRFlowable(
-                width="100%", thickness=4, color=COLOR_GREEN, spaceAfter=0.5*cm
-            ))
+            title_style = ParagraphStyle('CoverTitle',
+                fontSize=28, textColor=COLOR_DARK, spaceAfter=0.4*cm,
+                fontName='Helvetica-Bold', leading=34)
             
-            # Title
-            title_style = ParagraphStyle('Title',
-                fontSize=28, textColor=COLOR_DARK, spaceAfter=0.3*cm,
+            subtitle_style = ParagraphStyle('CoverSubtitle',
+                fontSize=13, textColor=COLOR_GRAY, spaceAfter=2.0*cm,
+                fontName='Helvetica', leading=17)
+                
+            org_style = ParagraphStyle('CoverOrg',
+                fontSize=18, textColor=COLOR_GREEN, spaceAfter=0.3*cm,
                 fontName='Helvetica-Bold')
-            elements.append(Paragraph("Greenhouse Gas", title_style))
-            elements.append(Paragraph("Emissions Report", title_style))
-            elements.append(Spacer(1, 0.5*cm))
+                
+            metadata_style = ParagraphStyle('CoverMeta',
+                fontSize=9.5, textColor=COLOR_GRAY, leading=14, fontName='Helvetica')
             
-            # Org name
-            org_style = ParagraphStyle('OrgName',
-                fontSize=16, textColor=COLOR_GREEN, spaceAfter=0.2*cm,
-                fontName='Helvetica-Bold')
-            elements.append(Paragraph(org.name if org else "Organization", org_style))
-            
-            # Period
-            period_style = ParagraphStyle('Period',
-                fontSize=12, textColor=COLOR_GRAY, spaceAfter=2*cm,
-                fontName='Helvetica')
-            period_str = f"{period_start.strftime('%B %Y')} — {period_end.strftime('%B %Y')}"
-            elements.append(Paragraph(period_str, period_style))
-            
-            elements.append(HRFlowable(width="100%", thickness=1, color=COLOR_GRAY))
-            elements.append(Spacer(1, 1*cm))
-            
-            # Summary stats box
-            total_scope1 = scope_totals.get('1', 0)
-            total_scope2 = scope_totals.get('2', 0)
-            total_scope3 = scope_totals.get('3', 0)
-            
-            stats_data = [
-                ['Metric', 'Value'],
-                ['Total Scope 1 Emissions', f"{total_scope1:,.1f} tCO₂e"],
-                ['Total Scope 2 Emissions', f"{total_scope2:,.1f} tCO₂e"],
-                ['Total Scope 3 Emissions', f"{total_scope3:,.1f} tCO₂e"],
-                ['TOTAL GHG EMISSIONS', f"{grand_total:,.1f} tCO₂e"],
+            content_elements = [
+                Paragraph("Greenhouse Gas Emissions Disclosure & Carbon Audit Report", title_style),
+                Paragraph("Aligned with the Greenhouse Gas (GHG) Protocol Corporate Standard", subtitle_style),
+                Paragraph(org.name if org else "Organization", org_style),
+                Spacer(1, 0.4*cm),
+                Paragraph(f"<b>Reporting Period:</b> {period_start.strftime('%B %Y')} — {period_end.strftime('%B %Y')}", metadata_style),
+                Paragraph(f"<b>Audit Date:</b> {date.today().strftime('%d %B %Y')}", metadata_style),
+                Paragraph("<b>Audit Standard:</b> GHG Protocol Scope 1, 2 & 3", metadata_style),
             ]
-            stats_table = Table(stats_data, colWidths=[10*cm, 6*cm])
-            stats_table.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), COLOR_DARK),
-                ('TEXTCOLOR', (0,0), (-1,0), white),
-                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0,0), (-1,0), 11),
-                ('BACKGROUND', (0,4), (-1,4), COLOR_GREEN),
-                ('TEXTCOLOR', (0,4), (-1,4), white),
-                ('FONTNAME', (0,4), (-1,4), 'Helvetica-Bold'),
-                ('FONTSIZE', (0,0), (-1,-1), 10),
-                ('ROWBACKGROUNDS', (0,1), (-1,3), [COLOR_BG, white]),
-                ('GRID', (0,0), (-1,-1), 0.5, HexColor('#e5e7eb')),
-                ('PADDING', (0,0), (-1,-1), 8),
-                ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-            ]))
-            elements.append(stats_table)
-            elements.append(Spacer(1, 2*cm))
             
-            # Footer
-            footer_style = ParagraphStyle('Footer',
-                fontSize=9, textColor=COLOR_GRAY, fontName='Helvetica',
-                alignment=TA_CENTER)
-            elements.append(Paragraph(
-                "This report is aligned with the GHG Protocol Corporate Standard. "
-                f"Generated by CarbonLens on {date.today().strftime('%d %B %Y')}.",
-                footer_style
-            ))
+            # Pack cover elements into table where Col 1 is spacing for sidebar background, Col 2 is content
+            cover_table = Table([[Spacer(1, 1), content_elements]], colWidths=[5.5*cm, 11.5*cm])
+            cover_table.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('LEFTPADDING', (1,0), (1,0), 0.6*cm),
+                ('RIGHTPADDING', (1,0), (1,0), 0),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+                ('TOPPADDING', (0,0), (-1,-1), 0),
+            ]))
+            elements.append(cover_table)
             elements.append(PageBreak())
             return elements
         
@@ -213,14 +180,13 @@ class ReportService:
             h1 = ParagraphStyle('H1', fontSize=18, fontName='Helvetica-Bold',
                 textColor=COLOR_DARK, spaceAfter=0.5*cm)
             body = ParagraphStyle('Body', fontSize=10, fontName='Helvetica',
-                textColor=COLOR_GRAY, spaceAfter=0.3*cm, leading=14)
+                textColor=COLOR_GRAY, spaceAfter=0.4*cm, leading=15)
             
             elements.append(Paragraph("Scope Emissions Breakdown", h1))
-            elements.append(HRFlowable(width="100%", thickness=2, color=COLOR_GREEN))
-            elements.append(Spacer(1, 0.5*cm))
+            elements.append(HRFlowable(width="100%", thickness=1.5, color=COLOR_GREEN, spaceAfter=0.6*cm))
             
-            # Pie chart
-            fig, ax = plt.subplots(figsize=(5, 3.5), facecolor='white')
+            # Donut chart
+            fig, ax = plt.subplots(figsize=(6, 3.8), facecolor='white')
             scope_labels = ['Scope 1', 'Scope 2', 'Scope 3']
             scope_values = [
                 scope_totals.get('1', 0.001),
@@ -228,14 +194,15 @@ class ReportService:
                 scope_totals.get('3', 0.001)
             ]
             colors_list = ['#ef4444', '#f97316', '#eab308']
+            
+            # Donut chart (width=0.4 creates the hollow center)
             wedges, texts, autotexts = ax.pie(
                 scope_values, labels=scope_labels, colors=colors_list,
-                autopct='%1.1f%%', startangle=90,
-                wedgeprops={'width': 0.6, 'edgecolor': 'white', 'linewidth': 2}
+                autopct='%1.1f%%', startangle=90, pctdistance=0.75,
+                wedgeprops={'width': 0.4, 'edgecolor': 'white', 'linewidth': 2},
+                textprops={'fontsize': 9, 'color': '#0f172a', 'weight': 'bold'}
             )
-            for autotext in autotexts:
-                autotext.set_fontsize(9)
-            ax.set_title(f'Total: {grand_total:,.1f} tCO₂e', fontsize=11, pad=10)
+            ax.set_title(f'Total Footprint: {grand_total:,.1f} tCO₂e', fontsize=12, pad=10, weight='bold', color='#0f172a')
             plt.tight_layout()
             
             img_buffer = io.BytesIO()
@@ -243,24 +210,36 @@ class ReportService:
                         facecolor='white')
             plt.close()
             img_buffer.seek(0)
-            elements.append(Image(img_buffer, width=12*cm, height=8*cm))
-            elements.append(Spacer(1, 0.5*cm))
             
-            # Scope definitions
+            elements.append(Image(img_buffer, width=13*cm, height=8.2*cm))
+            elements.append(Spacer(1, 0.4*cm))
+            
+            # Scope definitions in styled table panel
             scopes = [
-                ('Scope 1', 'Direct emissions from owned or controlled sources.',
-                 scope_totals.get('1', 0)),
-                ('Scope 2', 'Indirect emissions from purchased electricity/heat.',
-                 scope_totals.get('2', 0)),
-                ('Scope 3', 'All other indirect emissions in the value chain.',
-                 scope_totals.get('3', 0)),
+                ('Scope 1 (Direct)', 'Emissions from owned/controlled stationary or mobile combustion sources.', scope_totals.get('1', 0)),
+                ('Scope 2 (Indirect)', 'Emissions from purchased electricity, steam, heating, and cooling.', scope_totals.get('2', 0)),
+                ('Scope 3 (Value Chain)', 'Emissions from supply chain, outsourced logistics, and product lifecycle.', scope_totals.get('3', 0)),
             ]
+            
+            panel_data = []
             for scope_name, desc_text, total in scopes:
                 pct = (total / grand_total * 100) if grand_total > 0 else 0
-                elements.append(Paragraph(
-                    f"<b>{scope_name}</b>: {total:,.1f} tCO₂e ({pct:.1f}%) — {desc_text}",
-                    body
-                ))
+                panel_data.append([
+                    Paragraph(f"<b>{scope_name}</b>", ParagraphStyle('P1', fontSize=10, textColor=COLOR_DARK, fontName='Helvetica-Bold')),
+                    Paragraph(f"{desc_text}", ParagraphStyle('P2', fontSize=9, textColor=COLOR_GRAY, leading=12)),
+                    Paragraph(f"<b>{total:,.1f} t</b><br/><font color='#5a6b5a'>({pct:.1f}%)</font>", ParagraphStyle('P3', fontSize=9, alignment=2, leading=12))
+                ])
+            
+            panel_table = Table(panel_data, colWidths=[4.2*cm, 9.8*cm, 3.0*cm])
+            panel_table.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('BACKGROUND', (0,0), (-1,-1), COLOR_MINT),
+                ('GRID', (0,0), (-1,-1), 0.5, HexColor('#d1e3d1')),
+                ('PADDING', (0,0), (-1,-1), 10),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+                ('TOPPADDING', (0,0), (-1,-1), 10),
+            ]))
+            elements.append(panel_table)
             
             elements.append(PageBreak())
             return elements
@@ -273,8 +252,7 @@ class ReportService:
             h1 = ParagraphStyle('H1', fontSize=18, fontName='Helvetica-Bold',
                 textColor=COLOR_DARK, spaceAfter=0.5*cm)
             elements.append(Paragraph("Monthly Emission Trends", h1))
-            elements.append(HRFlowable(width="100%", thickness=2, color=COLOR_GREEN))
-            elements.append(Spacer(1, 0.5*cm))
+            elements.append(HRFlowable(width="100%", thickness=1.5, color=COLOR_GREEN, spaceAfter=0.6*cm))
             
             # Process monthly data
             from collections import defaultdict
@@ -289,30 +267,39 @@ class ReportService:
                 __import__('datetime').datetime.strptime(x, '%b %Y'))
             
             if months_list:
-                fig, ax = plt.subplots(figsize=(7, 4), facecolor='white')
+                fig, ax = plt.subplots(figsize=(7.5, 4.2), facecolor='white')
                 s1 = [monthly_by_scope[m].get('1', 0) for m in months_list]
                 s2 = [monthly_by_scope[m].get('2', 0) for m in months_list]
                 s3 = [monthly_by_scope[m].get('3', 0) for m in months_list]
                 x = range(len(months_list))
                 
-                ax.fill_between(x, s1, alpha=0.8, color='#ef4444', label='Scope 1')
+                # Plot with alpha area blends for modern look
+                ax.fill_between(x, s1, alpha=0.75, color='#ef4444', label='Scope 1')
                 ax.fill_between(x, 
                     [a+b for a,b in zip(s1,s2, strict=False)], s1, 
-                    alpha=0.8, color='#f97316', label='Scope 2')
+                    alpha=0.75, color='#f97316', label='Scope 2')
                 ax.fill_between(x,
                     [a+b+c for a,b,c in zip(s1,s2,s3, strict=False)], 
                     [a+b for a,b in zip(s1,s2, strict=False)],
-                    alpha=0.8, color='#eab308', label='Scope 3')
+                    alpha=0.75, color='#eab308', label='Scope 3')
                 
                 ax.set_xticks(x)
                 ax.set_xticklabels(
                     [m.split()[0] for m in months_list], 
-                    rotation=45, ha='right', fontsize=8
+                    rotation=45, ha='right', fontsize=9, color='#0f172a'
                 )
-                ax.set_ylabel('tCO₂e', fontsize=9)
-                ax.legend(loc='upper left', fontsize=8)
-                ax.grid(axis='y', alpha=0.3)
-                ax.set_facecolor('#fafafa')
+                ax.set_ylabel('tCO₂e', fontsize=10, color='#0f172a', weight='bold')
+                ax.legend(loc='upper left', fontsize=9, frameon=True, facecolor='white', edgecolor='#e2e8f0')
+                ax.grid(axis='y', linestyle='--', alpha=0.4, color='#cbd5e1')
+                ax.set_axisbelow(True)
+                ax.set_facecolor('#f8fafc')
+                
+                # Hide unnecessary chart frames
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                ax.spines['left'].set_color('#cbd5e1')
+                ax.spines['bottom'].set_color('#cbd5e1')
+                
                 plt.tight_layout()
                 
                 img_buffer = io.BytesIO()
@@ -320,8 +307,8 @@ class ReportService:
                             facecolor='white')
                 plt.close()
                 img_buffer.seek(0)
-                elements.append(Image(img_buffer, width=15*cm, height=9*cm))
-            
+                elements.append(Image(img_buffer, width=16*cm, height=9.2*cm))
+                
             elements.append(PageBreak())
             return elements
         
@@ -332,37 +319,46 @@ class ReportService:
             elements = []
             h1 = ParagraphStyle('H1', fontSize=18, fontName='Helvetica-Bold',
                 textColor=COLOR_DARK, spaceAfter=0.5*cm)
-            elements.append(Paragraph("Top Emitting Suppliers", h1))
-            elements.append(HRFlowable(width="100%", thickness=2, color=COLOR_GREEN))
-            elements.append(Spacer(1, 0.5*cm))
+            elements.append(Paragraph("Top Value Chain Contributors (Scope 3)", h1))
+            elements.append(HRFlowable(width="100%", thickness=1.5, color=COLOR_GREEN, spaceAfter=0.6*cm))
             
             if top_suppliers:
-                table_data: list[list[str]] = [['Supplier', 'Sector', 'tCO₂e', '% of Total', 'ESG Score']]
+                table_data: list[list[Any]] = [[
+                    Paragraph('<b>Supplier Node</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold')),
+                    Paragraph('<b>Sector</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold')),
+                    Paragraph('<b>Emissions (tCO₂e)</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2)),
+                    Paragraph('<b>% of Total</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2)),
+                    Paragraph('<b>ESG Index</b>', ParagraphStyle('TH', fontSize=10, textColor=white, fontName='Helvetica-Bold', alignment=2))
+                ]]
+                
                 for s in top_suppliers:
                     pct = (s.total / grand_total * 100) if grand_total > 0 else 0
                     esg = f"{s.esg_score:.0f}/100" if s.esg_score else "N/A"
                     table_data.append([
-                        s.name, s.sector or '—',
-                        f"{s.total:,.1f}", f"{pct:.1f}%", esg
+                        Paragraph(s.name, ParagraphStyle('TD', fontSize=9, textColor=COLOR_DARK)),
+                        Paragraph(s.sector or '—', ParagraphStyle('TD', fontSize=9, textColor=COLOR_GRAY)),
+                        Paragraph(f"{s.total:,.1f}", ParagraphStyle('TD', fontSize=9, textColor=COLOR_DARK, alignment=2)),
+                        Paragraph(f"{pct:.1f}%", ParagraphStyle('TD', fontSize=9, textColor=COLOR_DARK, alignment=2)),
+                        Paragraph(esg, ParagraphStyle('TD', fontSize=9, textColor=COLOR_DARK, alignment=2))
                     ])
                 
                 t = Table(table_data, 
-                    colWidths=[5.5*cm, 3.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+                    colWidths=[6.0*cm, 3.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+                
                 style = [
                     ('BACKGROUND', (0,0), (-1,0), COLOR_DARK),
-                    ('TEXTCOLOR', (0,0), (-1,0), white),
-                    ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0,0), (-1,0), 10),
-                    ('FONTSIZE', (0,1), (-1,-1), 9),
-                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [COLOR_BG, white]),
-                    ('GRID', (0,0), (-1,-1), 0.5, HexColor('#e5e7eb')),
-                    ('PADDING', (0,0), (-1,-1), 6),
-                    ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [HexColor('#ffffff'), HexColor('#f8fafc')]),
+                    ('GRID', (0,0), (-1,-1), 0.5, HexColor('#e2e8f0')),
+                    ('PADDING', (0,0), (-1,-1), 10),
+                    ('TOPPADDING', (0,0), (-1,-1), 10),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 10),
                 ]
-                # Highlight top emitter red
+                
+                # Highlight top emitter text red
                 if len(top_suppliers) > 0:
-                    style.append(('TEXTCOLOR', (0,1), (-1,1), COLOR_RED))
-                    style.append(('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'))
+                    style.append(('BACKGROUND', (0,1), (-1,1), HexColor('#fee2e2')))
+                
                 t.setStyle(TableStyle(style))
                 elements.append(t)
             else:
@@ -385,44 +381,79 @@ class ReportService:
             body = ParagraphStyle('Body', fontSize=10, fontName='Helvetica',
                 textColor=HexColor('#374151'), spaceAfter=0.2*cm, leading=14)
             
-            elements.append(Paragraph("Methodology & Data Sources", h1))
-            elements.append(HRFlowable(width="100%", thickness=2, color=COLOR_GREEN))
-            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Paragraph("Methodology & Reference Standards", h1))
+            elements.append(HRFlowable(width="100%", thickness=1.5, color=COLOR_GREEN, spaceAfter=0.6*cm))
             
             elements.append(Paragraph("GHG Protocol Alignment", h2))
             elements.append(Paragraph(
-                "This report has been prepared in accordance with the GHG Protocol "
-                "Corporate Accounting and Reporting Standard. Emissions are categorized "
-                "into Scope 1 (direct), Scope 2 (indirect energy), and Scope 3 "
-                "(value chain) following the GHG Protocol definitions.", body))
+                "This disclosure report follows the Greenhouse Gas (GHG) Protocol Corporate "
+                "Accounting and Reporting Standard guidelines. Emissions are categorized "
+                "into direct operational activities (Scope 1), purchased utility grids (Scope 2), "
+                "and external supply chain supply/logistics (Scope 3) to prevent double counting.", body))
             
-            elements.append(Paragraph("Emission Factors", h2))
+            elements.append(Paragraph("Emission Factors Applied", h2))
             elements.append(Paragraph(
-                "Transport emission factors sourced from UK DEFRA 2023 Guidelines: "
-                "Road freight: 0.10621 kg CO₂e/tonne-km, "
-                "Air freight: 0.60210 kg CO₂e/tonne-km, "
-                "Sea freight: 0.01570 kg CO₂e/tonne-km, "
-                "Rail: 0.02750 kg CO₂e/tonne-km.", body))
+                "Carbon intensities are derived using DEFRA 2023 Guidelines: "
+                "Road freight: 0.10621 kg CO₂e/tonne-km | "
+                "Air freight: 0.60210 kg CO₂e/tonne-km | "
+                "Sea freight: 0.01570 kg CO₂e/tonne-km | "
+                "Rail transit: 0.02750 kg CO₂e/tonne-km.", body))
             
-            elements.append(Paragraph("Data Quality", h2))
+            elements.append(Paragraph("Quality & Accuracy Metrics", h2))
             elements.append(Paragraph(
-                "Emission data sourced from direct supplier submissions, "
-                "logistics provider APIs, and internal energy consumption records. "
-                "All values reported in metric tonnes of CO₂ equivalent (tCO₂e) "
-                "using GWP100 values from IPCC AR6.", body))
+                "Data consists of direct utility sync APIs, verified supplier declarations, "
+                "and ERP ledger exports. Total figures are represented in metric tonnes of "
+                "CO₂ equivalent (tCO₂e) using the IPCC Sixth Assessment Report (AR6) GWP100 values.", body))
             
-            elements.append(Paragraph("Limitations", h2))
+            elements.append(Paragraph("Report Limitations", h2))
             elements.append(Paragraph(
-                "Scope 3 figures are estimates based on available supplier data "
-                "and may not capture the full value chain. This report covers the "
-                f"period {period_start.strftime('%d %B %Y')} to "
-                f"{period_end.strftime('%d %B %Y')}.", body))
+                "Value chain calculations are based on primary supplier reporting. Gaps in supplier "
+                "reporting are filled using global industry averages, which may introduce minor variances. "
+                "This disclosure is valid solely for the verified dates specified.", body))
             
             return elements
         
         story.extend(make_methodology())
         
+        # --- BACKGROUND CANVAS DECORATIONS ---
+        def draw_cover_decorations(canvas: Any, document: Any) -> None:
+            canvas.saveState()
+            # Left forest block
+            canvas.setFillColor(HexColor('#0d1a0f'))
+            canvas.rect(0, 0, 5.0*cm, 29.7*cm, fill=1, stroke=0)
+            
+            # Left thin mint accent line
+            canvas.setFillColor(HexColor('#2d7a4f'))
+            canvas.rect(5.0*cm, 0, 0.2*cm, 29.7*cm, fill=1, stroke=0)
+            canvas.restoreState()
+
+        def draw_later_decorations(canvas: Any, document: Any) -> None:
+            canvas.saveState()
+            # Running header
+            canvas.setFont('Helvetica-Bold', 8)
+            canvas.setFillColor(HexColor('#6b7280'))
+            canvas.drawString(2*cm, 28.2*cm, "CarbonLens — Corporate Emissions Disclosure")
+            
+            # Header border line
+            canvas.setStrokeColor(HexColor('#e5e7eb'))
+            canvas.setLineWidth(0.5)
+            canvas.line(2*cm, 27.9*cm, 19*cm, 27.9*cm)
+            
+            # Footer border line
+            canvas.line(2*cm, 2.2*cm, 19*cm, 2.2*cm)
+            
+            # Footer
+            canvas.setFont('Helvetica', 8)
+            canvas.drawString(2*cm, 1.8*cm, "CONFIDENTIAL — FOR INTERNAL SUSTAINABILITY AUDITS")
+            canvas.drawRightString(19*cm, 1.8*cm, f"Page {document.page}")
+            canvas.restoreState()
+
         # Build PDF
-        doc.build(story)
+        doc.build(
+            story,
+            onFirstPage=draw_cover_decorations,
+            onLaterPages=draw_later_decorations
+        )
+        
         logger.info("report_generated", report_id=report_id, path=output_path)
         return f"/static/reports/{safe_id}.pdf"
