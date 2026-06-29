@@ -34,8 +34,20 @@ const SupplierNode = ({ data, selected }: NodeProps) => {
   const border = selected ? "#6dc98a" : isHighInt ? "#dc2626" : isMedInt ? "#eab308" : "rgba(255,255,255,0.15)";
   const esgColor = d.esg_score < 40 ? "#dc2626" : d.esg_score <= 70 ? "#eab308" : "#22c55e";
 
+  const intensityClass = isHighInt ? 'high' : isMedInt ? 'medium' : 'low';
+  const selectedClass = selected ? 'selected' : '';
+
   return (
-    <div style={{ width: 180, background: bg, border: `1.5px solid ${border}`, borderRadius: 16, padding: 12, boxShadow: selected ? "0 0 0 2px rgba(109,201,138,0.3)" : "0 4px 12px rgba(0,0,0,0.1)", transition: "all 0.2s" }}>
+    <div 
+      className={`supplier-node-card intensity-${intensityClass} ${selectedClass}`}
+      style={{ 
+        width: 180, 
+        background: bg, 
+        border: `1.5px solid ${border}`, 
+        borderRadius: 16, 
+        padding: 12 
+      }}
+    >
       <Handle type="target" position={Position.Left} style={{ background: "#8ea58e", border: "none" }} />
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-sm truncate pr-2 text-white" title={d.label}>{d.label}</h3>

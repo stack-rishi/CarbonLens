@@ -336,25 +336,32 @@
 /* ─── REACT FLOW OVERRIDES ───────────────────────────────────────── */
 .react-flow__node {
   border-radius: 16px !important;
-  border: 1.5px solid rgba(255,255,255,0.10) !important;
-  transition: box-shadow 0.25s ease, transform 0.25s ease !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
-.react-flow__node:hover {
-  box-shadow: 0 0 0 2px rgba(45,122,79,0.40), 0 8px 24px rgba(0,0,0,0.3) !important;
+
+/* ─── CUSTOM SUPPLIER CARD ANIMATIONS ───────────────────────────── */
+.supplier-node-card {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  border-radius: 16px;
+}
+.supplier-node-card:hover {
+  box-shadow: 0 0 0 2px rgba(109,201,138,0.4), 0 8px 24px rgba(0,0,0,0.35) !important;
   transform: scale(1.04) !important;
 }
-.react-flow__node.selected {
+.supplier-node-card.selected {
   animation: node-glow-green 2s ease-in-out infinite !important;
   transform: scale(1.06) !important;
 }
-.react-flow__node.intensity-high {
-  animation: node-glow-red 2.5s ease-in-out infinite;
+.supplier-node-card.intensity-high {
+  animation: node-glow-red 2.5s ease-in-out infinite !important;
 }
-.react-flow__node.intensity-medium {
-  animation: node-glow-yellow 2.5s ease-in-out infinite;
+.supplier-node-card.intensity-medium {
+  animation: node-glow-yellow 2.5s ease-in-out infinite !important;
 }
-.react-flow__node.intensity-low {
-  animation: node-float 4s ease-in-out infinite;
+.supplier-node-card.intensity-low {
+  animation: node-float 4s ease-in-out infinite !important;
 }
 .react-flow__edge-path {
   stroke: #5a8a6a !important;
