@@ -30,6 +30,13 @@ export default function Chat() {
   useEffect(() => scrollToBottom(), [messages, isLoading, scrollToBottom]);
   useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = "auto"; textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`; } }, [input]);
 
+  useEffect(() => {
+    if (activeConvIdx !== null && convHistory[activeConvIdx]) {
+      const selected = convHistory[activeConvIdx] as any;
+      setMessages(selected.messages || []);
+    }
+  }, [activeConvIdx, convHistory]);
+
   const handleSend = async (msg?: string) => {
     const text = (msg ?? input).trim();
     if (!text || isLoading) return;
@@ -41,10 +48,20 @@ export default function Chat() {
       const data = res.data;
       const newConvId = data.id ?? data.conversation_id ?? conversationId;
       setConversationId(newConvId);
-      const assistantMsgs: Message[] = (data.messages || []).filter((m: any) => m.role === "assistant").map((m: any, i: number) => ({ role: "assistant", content: m.content, sources: m.sources ?? [], isFirstAssistant: i === 0 }));
-      if (!assistantMsgs.length && data.response) assistantMsgs.push({ role: "assistant", content: data.response, sources: data.sources ?? [], isFirstAssistant: true });
-      setMessages(p => [...p, ...assistantMsgs]);
-      if (newConvId) setConvHistory(p => p.find(c => c.id === newConvId) ? p : [{ id: newConvId, created_at: new Date().toISOString(), preview: text }, ...p]);
+      setMessages(data.messages || []);
+      if (newConvId) {
+        setConvHistory(p => {
+          const existing = p.find(c => c.id === newConvId);
+          if (existing) {
+            return p.map(c => c.id === newConvId ? { ...c, preview: text, messages: data.messages } : c);
+          } else {
+            return [{ id: newConvId, created_at: new Date().toISOString(), preview: text, messages: data.messages } as any, ...p];
+          }
+        });
+        if (!conversationId) {
+          setActiveConvIdx(0);
+        }
+      }
     } catch (err: any) {
       setMessages(p => [...p, { role: "system", content: `⚠️ ${err.response?.data?.detail || "An error occurred."}` }]);
     } finally { setIsLoading(false); }
