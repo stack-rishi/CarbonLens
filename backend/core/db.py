@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -12,17 +13,26 @@ from backend.core.config import settings
 # Base class for models
 Base = declarative_base()
 
+# Build engine kwargs — asyncpg-specific connect_args are only valid for Postgres
+_engine_kwargs: dict[str, Any] = {
+    "echo": False,
+    "future": True,
+}
+
+if settings.DATABASE_URL.startswith("postgresql"):
+    _engine_kwargs.update(
+        pool_size=10,
+        max_overflow=20,
+        connect_args={
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+        },
+    )
+
 # Create async engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    future=True,
-    pool_size=10,
-    max_overflow=20,
-    connect_args={
-        "statement_cache_size": 0,
-        "prepared_statement_cache_size": 0,
-    },
+    settings.DATABASE_URL or "sqlite+aiosqlite:///:memory:",
+    **_engine_kwargs,
 )
 
 # Async session factory
