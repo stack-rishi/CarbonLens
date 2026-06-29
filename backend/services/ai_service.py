@@ -1,9 +1,8 @@
 
 import structlog
 from anthropic import Anthropic
-from groq import Groq
-
 from backend.core.config import settings
+from groq import Groq
 
 logger = structlog.get_logger()
 
