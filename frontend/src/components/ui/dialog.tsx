@@ -35,7 +35,7 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
         onClick={() => onOpenChange(false)}
       />
       {/* Modal Container */}
-      <div className="z-50 w-full max-w-lg scale-95 opacity-0 animate-fade-in rounded-xl border border-white/10 bg-slate-950 p-6 shadow-2xl glass duration-300">
+      <div className="z-50 w-full max-w-lg rounded-xl border border-white/10 bg-slate-950 p-6 shadow-2xl glass duration-300 animate-fade-in-up">
         {children}
         <button 
           onClick={() => onOpenChange(false)}
