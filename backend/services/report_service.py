@@ -58,7 +58,9 @@ class ReportService:
         except ValueError:
             raise ValueError(f"Invalid report_id format: {report_id}")
             
-        output_dir = "backend/static/reports"
+        # Ensure output directory exists absolutely relative to project structure
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = os.path.join(backend_dir, "static", "reports")
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, f"{safe_id}.pdf")
         
