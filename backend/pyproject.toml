@@ -3,7 +3,6 @@ name = "carbonlens-backend"
 version = "0.1.0"
 description = "FastAPI Backend for CarbonLens carbon emissions tracker and optimizer"
 authors = ["Rishi sharma <stack-rishi@users.noreply.github.com>"]
-readme = "README.md"
 packages = [{include = "backend"}]
 
 [tool.poetry.dependencies]
@@ -56,3 +55,7 @@ ignore = ["E501", "B008", "B904", "N806", "SIM105", "F821", "B006", "ARG001"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = [".."]
+
