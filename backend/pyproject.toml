@@ -2,7 +2,7 @@
 name = "carbonlens-backend"
 version = "0.1.0"
 description = "FastAPI Backend for CarbonLens carbon emissions tracker and optimizer"
-authors = ["CarbonLens Team <info@carbonlens.com>"]
+authors = ["Rishi sharma <stack-rishi@users.noreply.github.com>"]
 readme = "README.md"
 packages = [{include = "backend"}]
 
