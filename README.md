@@ -21,7 +21,7 @@
 
 **🏆 Built for OSF HackOne 2K26 — Final Round | Category: Sustainability & CleanTech**
 
-**👨‍💻 Team Bang-Op 2.0**
+**👨‍💻 Team Last Brain Cell**
 
 <br/>
 
@@ -545,7 +545,7 @@ SENTRY_DSN=your-sentry-dsn       # Optional
 
 <div align="center">
 
-**Rishi Sharma** · Team Bang-Op 2.0
+**Rishi Sharma** · Team Last Brain Cell
 
 [![GitHub](https://img.shields.io/badge/GitHub-stack--rishi-181717?style=for-the-badge&logo=github)](https://github.com/stack-rishi)
 
