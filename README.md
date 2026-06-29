@@ -61,5 +61,5 @@ carbonlens/
 See `scripts/deploy.md` for Fly.io + Vercel deployment guide.
 
 ## Hackathon
-Built for the Hackathon by RISHI.
+Built for the Hackathon by Rishi sharma.
 Category: Sustainability & CleanTech
