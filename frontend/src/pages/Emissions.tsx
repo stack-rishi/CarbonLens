@@ -89,6 +89,42 @@ export default function Emissions() {
     createMutation.mutate({ supplier_id: supplierId || null, scope, category, amount_tco2e: parseFloat(amount), period_start: pStart, period_end: pEnd, source });
   };
 
+  const handleExportCSV = () => {
+    if (!records || records.length === 0) return;
+    const headers = ["Period Start", "Period End", "Scope", "Category", "Supplier Node", "Source", "Emissions (tCO2e)"];
+    const rows = records.map(r => {
+      const sName = suppliers?.find(s => s.id === r.supplier_id)?.name || "Corporate (Internal)";
+      return [
+        r.period_start,
+        r.period_end,
+        `Scope ${r.scope}`,
+        r.category,
+        sName,
+        r.source,
+        r.amount_tco2e
+      ];
+    });
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => {
+        const strVal = String(val);
+        if (strVal.includes(",") || strVal.includes("\"") || strVal.includes("\n")) {
+          return `"${strVal.replace(/"/g, '""')}"`;
+        }
+        return strVal;
+      }).join(","))
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `emissions_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const isAdmin   = user?.role === "admin";
   const isAnalyst = user?.role === "admin" || user?.role === "analyst";
 
@@ -140,7 +176,7 @@ export default function Emissions() {
               {records.length} entries · {totalShown.toFixed(1)} tCO2e
             </span>
           ) : null}
-          <button className="btn-ghost text-sm gap-1.5 py-2 px-4">
+          <button onClick={handleExportCSV} className="btn-ghost text-sm gap-1.5 py-2 px-4" disabled={!records?.length}>
             <FileDown className="h-4 w-4" /> Export CSV
           </button>
         </div>
