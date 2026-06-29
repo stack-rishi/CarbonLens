@@ -21,7 +21,7 @@
 
 **🏆 Built for OSF HackOne 2K26 — Final Round | Category: Sustainability & CleanTech**
 
-**👨‍💻 Team Bang-Op 2.0**
+**👨‍💻 Team Last Brain Cell**
 
 <br/>
 
@@ -523,6 +523,19 @@ SENTRY_DSN=your-sentry-dsn       # Optional
 
 ---
 
+## 🤖 AI Tools Disclosure
+
+> **Mandatory disclosure as per OSF HackOne 2K26 Rules (Section 3)**
+
+| AI Tool | Usage Area | How It Was Used |
+|:---|:---|:---|
+| **Claude (Anthropic)** | Code Assistance | Used for code generation, debugging, architecture decisions, and README documentation. All AI-generated code was reviewed, understood, and modified by team members before integration. |
+| **Gemini (Google)** | Code Assistance | Used as an AI coding assistant for development support, code suggestions, and project scaffolding. |
+
+> ⚠️ **Disclaimer**: All AI-assisted code was thoroughly reviewed, tested, and validated by team members. The core logic, architecture design, and problem-solving approach are original work by Team Last Brain Cell. AI tools were used as productivity aids, not as a substitute for understanding.
+
+---
+
 ## 🏆 Hackathon Submission — OSF HackOne 2K26
 
 <div align="center">
@@ -541,11 +554,16 @@ SENTRY_DSN=your-sentry-dsn       # Optional
 
 ---
 
-## 👨‍💻 Author
+## 👥 Team Members & Roles
 
 <div align="center">
 
-**Rishi Sharma** · Team Bang-Op 2.0
+### Team Last Brain Cell 🧠
+
+| Member | Role | Responsibilities |
+|:---|:---:|:---|
+| **Rishi Sharma** | Full Stack Developer | Backend architecture, API design, AI/ML integration, DevOps, deployment |
+| **Anshika Roy** | Full Stack Developer | Frontend development, UI/UX design, component architecture, testing |
 
 [![GitHub](https://img.shields.io/badge/GitHub-stack--rishi-181717?style=for-the-badge&logo=github)](https://github.com/stack-rishi)
 
