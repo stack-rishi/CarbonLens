@@ -115,3 +115,28 @@ async def get_supply_chain_graph(
         )
 
     return {"nodes": nodes, "edges": edges}
+
+
+from backend.models.schemas import SupplyChainEdgeCreate
+from backend.models.schemas import SupplyChainEdge as EdgeSchema
+
+@router.post("/supply-chain/edges", response_model=EdgeSchema, status_code=201)
+async def create_supply_chain_edge(
+    payload: SupplyChainEdgeCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> Any:
+    """Create a new supply chain edge linking two suppliers."""
+    edge = SupplyChainEdge(
+        org_id=uuid.UUID(current_user.org_id),
+        from_supplier_id=payload.from_supplier_id,
+        to_supplier_id=payload.to_supplier_id,
+        transport_mode=payload.transport_mode,
+        distance_km=payload.distance_km,
+        weight_tonnes=payload.weight_tonnes,
+    )
+    db.add(edge)
+    await db.commit()
+    await db.refresh(edge)
+    return edge
+

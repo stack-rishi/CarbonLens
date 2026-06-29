@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow, Controls, Background, MiniMap, Handle, Position,
   useNodesState, useEdgesState, useReactFlow, ReactFlowProvider,
@@ -10,6 +10,12 @@ import * as dagre from "@dagrejs/dagre";
 import { api } from "../lib/api";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Network, Plus, Zap, Navigation2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../components/ui/dialog";
+
+const inputStyle: React.CSSProperties = {
+  background: "#eef5ee", border: "1px solid #d1e3d1", borderRadius: 12,
+  padding: "9px 13px", fontSize: 14, color: "#0d1f10", width: "100%", outline: "none",
+};
 
 interface SupplierGraphData {
   nodes: { id: string; label: string; country: string; sector: string; esg_score: number; tco2e_30d: number; intensity: number; trend: "up" | "down" | "flat"; }[];
@@ -79,11 +85,51 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'LR') => {
 };
 
 function SupplyChainMapInner() {
+  const queryClient = useQueryClient();
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const { fitView } = useReactFlow();
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Add Edge Form State
+  const [open, setOpen] = useState(false);
+  const [fromSupplierId, setFromSupplierId] = useState("");
+  const [toSupplierId, setToSupplierId] = useState("");
+  const [transportMode, setTransportMode] = useState("road");
+  const [distanceKm, setDistanceKm] = useState("1000");
+  const [weightTonnes, setWeightTonnes] = useState("10");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleCreateEdge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fromSupplierId || !toSupplierId) return;
+    if (fromSupplierId === toSupplierId) {
+      alert("Source and target nodes must be different.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.post("/supply-chain/edges", {
+        from_supplier_id: fromSupplierId,
+        to_supplier_id: toSupplierId,
+        transport_mode: transportMode,
+        distance_km: parseFloat(distanceKm),
+        weight_tonnes: parseFloat(weightTonnes),
+      });
+      queryClient.invalidateQueries({ queryKey: ["supply-chain-graph"] });
+      setOpen(false);
+      setFromSupplierId("");
+      setToSupplierId("");
+      setTransportMode("road");
+      setDistanceKm("1000");
+      setWeightTonnes("10");
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to create edge.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const { data: graphData } = useQuery<SupplierGraphData>({ queryKey: ["supply-chain-graph"], queryFn: async () => (await api.get("/supply-chain/graph")).data });
 
@@ -121,7 +167,7 @@ function SupplyChainMapInner() {
           <div className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: "#e8f2e8", color: "#5a6b5a", border: "1px solid #d1e3d1" }}>{nodes.length} Nodes · {edges.length} Edges</div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn-ghost py-2 text-xs gap-1.5"><Plus className="h-3 w-3" /> Add Edge</button>
+          <button onClick={() => setOpen(true)} className="btn-ghost py-2 text-xs gap-1.5"><Plus className="h-3 w-3" /> Add Edge</button>
           <button className="btn-ghost py-2 text-xs gap-1.5" onClick={onAutoLayout}><Zap className="h-3 w-3" /> Auto Layout</button>
           <button className="btn-primary py-2 text-xs gap-1.5" onClick={() => fitView({ duration: 800 })}><Navigation2 className="h-3 w-3" /> Fit View</button>
         </div>
@@ -184,6 +230,95 @@ function SupplyChainMapInner() {
           </div>
         </div>
       )}
+
+      {/* Add Edge Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent style={{ background: "#f5f8f5", border: "1px solid #d1e3d1", borderRadius: 20, maxWidth: 480 }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: "#0d1f10" }}>Add Logistics Edge</DialogTitle>
+            <DialogDescription style={{ color: "#5a6b5a" }}>
+              Define a transport routing link between two nodes in your supply chain network.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateEdge} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="label-caps">From Node (Source)</label>
+                <select 
+                  value={fromSupplierId} 
+                  onChange={(e) => setFromSupplierId(e.target.value)} 
+                  style={inputStyle} 
+                  required
+                >
+                  <option value="">Select source...</option>
+                  {graphData?.nodes.map((n) => (
+                    <option key={n.id} value={n.id}>{n.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="label-caps">To Node (Destination)</label>
+                <select 
+                  value={toSupplierId} 
+                  onChange={(e) => setToSupplierId(e.target.value)} 
+                  style={inputStyle} 
+                  required
+                >
+                  <option value="">Select destination...</option>
+                  {graphData?.nodes.map((n) => (
+                    <option key={n.id} value={n.id}>{n.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5 col-span-1">
+                <label className="label-caps">Transit Mode</label>
+                <select 
+                  value={transportMode} 
+                  onChange={(e) => setTransportMode(e.target.value)} 
+                  style={inputStyle}
+                >
+                  <option value="road">🚛 Road</option>
+                  <option value="sea">🚢 Sea</option>
+                  <option value="air">✈️ Air</option>
+                  <option value="rail">🚆 Rail</option>
+                </select>
+              </div>
+              <div className="space-y-1.5 col-span-1">
+                <label className="label-caps">Distance (km)</label>
+                <input 
+                  type="number" 
+                  value={distanceKm} 
+                  onChange={(e) => setDistanceKm(e.target.value)} 
+                  style={inputStyle} 
+                  required 
+                  min="0"
+                />
+              </div>
+              <div className="space-y-1.5 col-span-1">
+                <label className="label-caps">Weight (tonnes)</label>
+                <input 
+                  type="number" 
+                  value={weightTonnes} 
+                  onChange={(e) => setWeightTonnes(e.target.value)} 
+                  style={inputStyle} 
+                  required 
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <button type="button" onClick={() => setOpen(false)} className="btn-ghost text-sm py-2 px-5">Cancel</button>
+              <button type="submit" disabled={submitting} className="btn-primary text-sm py-2 px-6">
+                {submitting ? "Adding..." : "Add Link"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
