@@ -2,13 +2,14 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from backend.core.auth import CurrentUser, get_current_user
 from backend.core.db import get_db
 from backend.models.models import EmissionRecord, Supplier, SupplyChainEdge
+from backend.models.schemas import SupplyChainEdge as EdgeSchema
+from backend.models.schemas import SupplyChainEdgeCreate
+from fastapi import APIRouter, Depends
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
@@ -117,8 +118,6 @@ async def get_supply_chain_graph(
     return {"nodes": nodes, "edges": edges}
 
 
-from backend.models.schemas import SupplyChainEdgeCreate
-from backend.models.schemas import SupplyChainEdge as EdgeSchema
 
 @router.post("/supply-chain/edges", response_model=EdgeSchema, status_code=201)
 async def create_supply_chain_edge(

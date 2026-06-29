@@ -5,8 +5,8 @@ from datetime import date
 from typing import Any
 
 import matplotlib
+from backend.models.models import EmissionRecord, Organization, Supplier
 from reportlab.lib.colors import HexColor, white
-from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
@@ -22,8 +22,6 @@ from reportlab.platypus import (
 )
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from backend.models.models import EmissionRecord, Organization, Supplier
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -179,8 +177,6 @@ class ReportService:
             elements = []
             h1 = ParagraphStyle('H1', fontSize=18, fontName='Helvetica-Bold',
                 textColor=COLOR_DARK, spaceAfter=0.5*cm)
-            body = ParagraphStyle('Body', fontSize=10, fontName='Helvetica',
-                textColor=COLOR_GRAY, spaceAfter=0.4*cm, leading=15)
             
             elements.append(Paragraph("Scope Emissions Breakdown", h1))
             elements.append(HRFlowable(width="100%", thickness=1.5, color=COLOR_GREEN, spaceAfter=0.6*cm))
