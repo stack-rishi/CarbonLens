@@ -31,17 +31,17 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" 
+        className="fixed inset-0 bg-[#0d1a0f]/60 backdrop-blur-sm transition-opacity" 
         onClick={() => onOpenChange(false)}
       />
       {/* Modal Container */}
-      <div className="z-50 w-full max-w-lg rounded-xl border border-white/10 bg-slate-950 p-6 shadow-2xl glass duration-300 animate-fade-in-up">
+      <div className="z-50 w-full max-w-[480px] rounded-2xl border border-[#d1e3d1] bg-[#f5f8f5] p-6 shadow-2xl duration-300 animate-fade-in-up relative">
         {children}
         <button 
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          className="absolute right-4 top-4 rounded-lg p-1.5 text-[#5a6b5a] hover:text-[#0d1f10] hover:bg-[#e8f2e8] transition-all"
         >
-          <X className="h-4 w-4 text-slate-400" />
+          <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </button>
       </div>
@@ -50,24 +50,30 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   )
 }
 
-const DialogContent = ({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => (
-  <div className={cn("space-y-4", className)} style={style}>{children}</div>
-)
+const DialogContent = ({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => {
+  // Extract and omit background/border styles that pages pass to prevent double-boxing
+  const { background, border, borderRadius, boxShadow, padding, ...cleanedStyle } = style || {};
+  return (
+    <div className={cn("space-y-4", className)} style={cleanedStyle}>
+      {children}
+    </div>
+  )
+}
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 text-left mb-2", className)} {...props} />
 )
 
 const DialogTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h2 className={cn("text-lg font-semibold leading-none tracking-tight text-white", className)} {...props} />
+  <h2 className={cn("text-lg font-bold tracking-tight text-[#0d1f10]", className)} {...props} />
 )
 
 const DialogDescription = ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn("text-sm text-slate-400", className)} {...props} />
+  <p className={cn("text-sm text-[#5a6b5a]", className)} {...props} />
 )
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
+  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-2", className)} {...props} />
 )
 
 export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter }
