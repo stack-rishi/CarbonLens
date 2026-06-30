@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../lib/api";
 import {
   BarChart3,
   Network,
@@ -13,11 +15,13 @@ import {
   User as UserIcon,
   Menu,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
 const NAV_ITEMS = [
   { name: "Dashboard",    href: "/dashboard",    icon: BarChart3 },
+  { name: "Compliance",   href: "/compliance",   icon: ShieldCheck },
   { name: "Supply Chain", href: "/supply-chain", icon: Network },
   { name: "Emissions",    href: "/emissions",    icon: Zap },
   { name: "Suppliers",    href: "/suppliers",    icon: Building2 },
@@ -27,6 +31,7 @@ const NAV_ITEMS = [
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard":    "Dashboard",
+  "/compliance":   "Compliance Monitor",
   "/supply-chain": "Supply Chain Map",
   "/emissions":    "Emissions Ledger",
   "/suppliers":    "Suppliers Network",
@@ -47,6 +52,20 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? "CarbonLens";
+
+  // Fetch alert counts for sidebar badge
+  const { data: complianceStatus } = useQuery({
+    queryKey: ["compliance-status"],
+    queryFn: async () => {
+      const res = await api.get("/compliance/status");
+      return res.data;
+    },
+    refetchInterval: 30000,
+    retry: false,
+  });
+  const urgentAlerts =
+    (complianceStatus?.active_alerts_count?.critical ?? 0) +
+    (complianceStatus?.active_alerts_count?.high ?? 0);
 
   const handleLogout = () => {
     logout();
@@ -95,6 +114,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                   {item.name}
                 </span>
                 
+                {/* Alert badge for Compliance nav item */}
+                {item.name === "Compliance" && urgentAlerts > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold tracking-wider">
+                    {urgentAlerts}
+                  </span>
+                )}
+
                 {/* NEW Badge for AI Copilot */}
                 {item.name === "AI Copilot" && (
                   <span className="ml-auto px-2 py-0.5 rounded-full bg-[#2d7a4f] text-white text-[9px] font-bold tracking-wider">

@@ -10,6 +10,7 @@ import SupplyChain from "./pages/SupplyChain";
 import Reports from "./pages/Reports";
 import Chat from "./pages/Chat";
 import Onboarding from "./pages/Onboarding";
+import Compliance from "./pages/Compliance";
 import { Toaster } from "./components/ui/toaster";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -47,6 +48,7 @@ export default function App() {
 
         {/* Protected pages */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
         <Route path="/supply-chain" element={<ProtectedRoute><SupplyChain /></ProtectedRoute>} />
         <Route path="/emissions" element={<ProtectedRoute><Emissions /></ProtectedRoute>} />
         <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />

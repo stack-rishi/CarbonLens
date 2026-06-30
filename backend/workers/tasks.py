@@ -12,13 +12,13 @@ logger = structlog.get_logger()
 async def compile_report_task(report_id: UUID) -> None:
     """Asynchronous background task to generate PDF report and update report status in database."""
     logger.info("report_compilation_started", report_id=str(report_id))
-    
+
     async with AsyncSessionLocal() as db:
         try:
             # 1. Fetch report details
             result = await db.execute(select(Report).where(Report.id == report_id))
             report = result.scalars().first()
-            
+
             if not report:
                 logger.error("report_not_found", report_id=str(report_id))
                 return
@@ -27,16 +27,27 @@ async def compile_report_task(report_id: UUID) -> None:
             report.status = "processing"
             await db.commit()
 
-            # 2. Call PDF Generator
-            pdf_url = await ReportService.generate_pdf_report(
-                db=db,
-                org_id=report.org_id,
-                period_start=report.period_start,
-                period_end=report.period_end,
-            )
+            # 2. Branch on report_type
+            report_type = getattr(report, "report_type", "sustainability") or "sustainability"
+
+            if report_type == "compliance":
+                from backend.services.compliance_pdf_service import generate_compliance_pdf
+                pdf_url = await generate_compliance_pdf(
+                    db=db,
+                    org_id=report.org_id,
+                    report_id=report.id,
+                    period_start=report.period_start,
+                    period_end=report.period_end,
+                )
+            else:
+                pdf_url = await ReportService.generate_pdf_report(
+                    db=db,
+                    org_id=report.org_id,
+                    period_start=report.period_start,
+                    period_end=report.period_end,
+                )
 
             # 3. Update report record on success
-            # Re-fetch or update in active session
             result = await db.execute(select(Report).where(Report.id == report_id))
             report = result.scalars().first()
             if report:

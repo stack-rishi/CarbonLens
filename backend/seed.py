@@ -5,12 +5,13 @@ import uuid
 from datetime import date, timedelta
 
 import bcrypt
-from sqlalchemy import select
+from sqlalchemy import func, select
 from supabase import create_client
 
 from backend.core.config import settings
 from backend.core.db import AsyncSessionLocal
 from backend.models.models import (
+    ComplianceThreshold,
     EmissionRecord,
     Organization,
     Supplier,
@@ -33,13 +34,21 @@ async def seed_data() -> None:
                 name="Acme Corp",
                 sector="manufacturing",
                 country="IN",
-                plan="enterprise"
+                plan="enterprise",
+                baseline_year=2023,
+                target_reduction_pct=20.0,
+                net_zero_target_year=2030,
             )
             db.add(org)
             await db.flush()
             print(f"Created Organization: {org.name} ({org.id})")
         else:
-            print(f"Organization Acme Corp already exists ({org.id})")
+            # Update existing org with new fields
+            org.baseline_year = 2023
+            org.target_reduction_pct = 20.0
+            org.net_zero_target_year = 2030
+            await db.flush()
+            print(f"Organization Acme Corp already exists ({org.id}), updated fields")
 
         # 2. Create Admin User
         user_email = "admin@acmecorp.com"
@@ -65,7 +74,7 @@ async def seed_data() -> None:
                 id=uuid.UUID(auth_user_id),
                 org_id=org.id,
                 email=user_email,
-                password_hash=bcrypt.hashpw(b"password123", bcrypt.gensalt()).decode("utf-8"),  # SECURITY FIX: store hashed password
+                password_hash=bcrypt.hashpw(b"password123", bcrypt.gensalt()).decode("utf-8"),
                 role="admin"
             )
             db.add(admin_user)
@@ -107,14 +116,12 @@ async def seed_data() -> None:
             db_suppliers.append(supplier)
 
         # 4. Create 24 Months of Emission Records
-        # We generate monthly records for the past 24 months
         today = date.today()
-        # Start 24 months ago, align with beginning of that month
         start_year = today.year - 2 if today.month > 1 else today.year - 3
         start_month = (today.month - 1) % 12 + 1
-        
+
         current_date = date(start_year, start_month, 1)
-        
+
         # Check if emission records already exist
         rec_stmt = select(EmissionRecord).where(EmissionRecord.org_id == org.id)
         res = await db.execute(rec_stmt)
@@ -123,10 +130,8 @@ async def seed_data() -> None:
         if not existing_recs:
             print("Generating 24 months of historical emission records...")
             records_to_add = []
-            
-            # Generate records month by month
+
             for month_idx in range(24):
-                # Calculate start/end of current month
                 period_start = current_date
                 if period_start.month == 12:
                     next_month = date(period_start.year + 1, 1, 1)
@@ -134,26 +139,16 @@ async def seed_data() -> None:
                     next_month = date(period_start.year, period_start.month + 1, 1)
                 period_end = next_month - timedelta(days=1)
 
-                # Upward trend factor (e.g., grows slightly over 24 months)
                 trend = 1.0 + (month_idx * 0.015)
-                # Seasonal factor (higher in winter/summer due to HVAC, lowest in spring/autumn)
-                # Max seasonality in January (month 1) and July (month 7)
                 seasonality = 1.0 + 0.15 * math.sin((period_start.month - 4) * math.pi / 6)
 
-                # Generate records per supplier
                 for idx, supplier in enumerate(db_suppliers):
-                    # Random scope distribution
-                    # Supplier 1: Steel (Scope 3, high emissions)
-                    # Supplier 2: Transport (Scope 3, mid emissions)
-                    # Supplier 5: Energy (Scope 2, mid emissions)
-                    
                     base_amount = 5.0 + (idx * 3.5)
                     amount = base_amount * trend * seasonality * random.uniform(0.9, 1.1)
 
-                    # Distribute Scopes
                     scope = "3"
                     category = "purchased_goods"
-                    
+
                     if supplier.name == "UK Power Solutions":
                         scope = "2"
                         category = "electricity"
@@ -177,7 +172,6 @@ async def seed_data() -> None:
                         )
                     )
 
-                # Advance to next month
                 current_date = next_month
 
             db.add_all(records_to_add)
@@ -185,33 +179,26 @@ async def seed_data() -> None:
             print(f"Generated {len(records_to_add)} monthly emission records.")
 
         # 5. Create Supply Chain Edges
-        # Connect suppliers in a logistics graph
-        # Indo Steel -> Nippon Electronics -> Texas Plastics -> Euro Logistics -> Acme Corp
         edge_stmt = select(SupplyChainEdge).where(SupplyChainEdge.org_id == org.id)
         res = await db.execute(edge_stmt)
         existing_edges = res.scalars().all()
 
         if not existing_edges:
             print("Connecting supply chain network edges...")
-            
-            # Map suppliers by name
+
             s_map = {s.name: s for s in db_suppliers}
-            
+
             edges_to_create = [
-                # Indo Steel -> Nippon Electronics
                 {"from": "Indo Steel Ltd", "to": "Nippon Electronics", "mode": "sea", "dist": 6000.0, "wt": 150.0},
-                # Nippon Electronics -> Texas Plastics Inc
                 {"from": "Nippon Electronics", "to": "Texas Plastics Inc", "mode": "air", "dist": 10500.0, "wt": 12.0},
-                # Texas Plastics Inc -> Euro Logistics GmbH
                 {"from": "Texas Plastics Inc", "to": "Euro Logistics GmbH", "mode": "sea", "dist": 8200.0, "wt": 45.0},
-                # Euro Logistics GmbH -> Acme Corp (sells/delivers to manufacturer)
                 {"from": "Euro Logistics GmbH", "to": "Indo Steel Ltd", "mode": "road", "dist": 1200.0, "wt": 80.0},
             ]
 
             for edge_data in edges_to_create:
                 from_supp = s_map.get(edge_data["from"])
                 to_supp = s_map.get(edge_data["to"])
-                
+
                 if from_supp and to_supp:
                     edge = SupplyChainEdge(
                         org_id=org.id,
@@ -222,12 +209,107 @@ async def seed_data() -> None:
                         weight_tonnes=edge_data["wt"]
                     )
                     db.add(edge)
-            
-            await db.commit()
-            print("Supply chain edges connected successfully.")
-        else:
-            await db.commit()
-            print("Supply chain edges already exist.")
+            print("Supply chain edges connected.")
+
+        # ── 6. Seed Compliance Thresholds ──────────────────────────────────────
+        print("Seeding compliance thresholds...")
+
+        # Compute average monthly totals per scope from seeded data
+        # Group by month and scope, then average across all months
+        monthly_scope_result = await db.execute(
+            select(
+                func.date_trunc("month", EmissionRecord.period_start).label("month"),
+                EmissionRecord.scope,
+                func.sum(EmissionRecord.amount_tco2e).label("total"),
+            )
+            .where(EmissionRecord.org_id == org.id)
+            .group_by("month", EmissionRecord.scope)
+        )
+        monthly_rows = monthly_scope_result.fetchall()
+
+        # Compute averages per scope
+        scope_monthly: dict[str, list[float]] = {"1": [], "2": [], "3": []}
+        for row in monthly_rows:
+            if row.scope in scope_monthly and row.total:
+                scope_monthly[row.scope].append(float(row.total))
+
+        def avg(vals: list[float]) -> float:
+            return sum(vals) / len(vals) if vals else 0.0
+
+        avg_s1 = avg(scope_monthly["1"])
+        avg_s2 = avg(scope_monthly["2"])
+        avg_s3 = avg(scope_monthly["3"])
+        avg_total = avg_s1 + avg_s2 + avg_s3
+
+        # Compute thresholds: 1.15x for s1/s2, 1.10x for s3, 1.12x for total
+        # But also check current month — if all are below threshold, deliberately set one below current
+        curr_month_start = today.replace(day=1)
+        curr_month_result = await db.execute(
+            select(
+                EmissionRecord.scope,
+                func.sum(EmissionRecord.amount_tco2e).label("total"),
+            )
+            .where(
+                EmissionRecord.org_id == org.id,
+                EmissionRecord.period_start >= curr_month_start,
+            )
+            .group_by(EmissionRecord.scope)
+        )
+        curr_month = {row.scope: float(row.total or 0) for row in curr_month_result}
+        _curr_total = sum(curr_month.values())  # noqa: F841
+
+        thresholds_to_seed = {
+            "1": avg_s1 * 1.15 if avg_s1 > 0 else 10.0,
+            "2": avg_s2 * 1.15 if avg_s2 > 0 else 10.0,
+            "3": avg_s3 * 1.10 if avg_s3 > 0 else 10.0,
+            "total": avg_total * 1.12 if avg_total > 0 else 50.0,
+        }
+
+        # Force one threshold to breach so we get a demo alert
+        for scope, total in curr_month.items():
+            if total > 0:
+                thresholds_to_seed[scope] = total * 0.9  # Set 10% below current
+                break
+
+        # Ensure at least one scope shows warning/critical for demo
+        # Set scope 3 threshold slightly below current month scope-3 value if it's not already exceeded
+        curr_s3 = curr_month.get("3", 0)
+        if curr_s3 > 0 and thresholds_to_seed["3"] > curr_s3:
+            thresholds_to_seed["3"] = curr_s3 * 0.90  # Set 10% below current -> will trigger alert
+            print(f"Adjusted Scope 3 threshold to {thresholds_to_seed['3']:.2f} tCO2e (below current {curr_s3:.2f}) for demo realism")
+
+        for scope_label, threshold_val in thresholds_to_seed.items():
+            thresh_stmt = select(ComplianceThreshold).where(
+                ComplianceThreshold.org_id == org.id,
+                ComplianceThreshold.scope == scope_label,
+            )
+            res = await db.execute(thresh_stmt)
+            existing_thresh = res.scalars().first()
+
+            if existing_thresh:
+                existing_thresh.threshold_tco2e = round(threshold_val, 3)
+                print(f"Updated Scope {scope_label} threshold: {threshold_val:.3f} tCO2e")
+            else:
+                db.add(ComplianceThreshold(
+                    id=uuid.uuid4(),
+                    org_id=org.id,
+                    scope=scope_label,
+                    threshold_tco2e=round(threshold_val, 3),
+                ))
+                print(f"Created Scope {scope_label} threshold: {threshold_val:.3f} tCO2e")
+
+        await db.commit()
+        print("Compliance thresholds seeded.")
+
+        # 7. Run initial alert evaluation so there are alerts in the DB for the demo
+        print("Running initial alert evaluation...")
+        from backend.services import alert_service
+        async with AsyncSessionLocal() as alert_db:
+            try:
+                alerts = await alert_service.evaluate_and_generate_alerts(org.id, alert_db)
+                print(f"Generated {len(alerts)} alerts from initial evaluation.")
+            except Exception as e:
+                print(f"Alert evaluation warning (non-fatal): {e}")
 
         print("Database seeding completed successfully!")
 

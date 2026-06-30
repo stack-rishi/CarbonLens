@@ -9,7 +9,9 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Integer,
     String,
+    Text,
     func,
 )
 from sqlalchemy import (
@@ -26,9 +28,14 @@ ROLE_ENUM = ("admin", "analyst", "viewer")
 SCOPE_ENUM = ("1", "2", "3")
 TRANSPORT_MODE_ENUM = ("air", "sea", "road", "rail")
 REPORT_STATUS_ENUM = ("pending", "processing", "done", "failed")
+COMPLIANCE_SCOPE_ENUM = ("1", "2", "3", "total")
+ALERT_TYPE_ENUM = ("emission_spike", "threshold_exceeded", "low_sustainability_score")
+ALERT_SEVERITY_ENUM = ("low", "medium", "high", "critical")
+ALERT_STATUS_ENUM = ("active", "acknowledged", "resolved")
+REPORT_TYPE_ENUM = ("sustainability", "compliance")
 
 
-class Organization(Base): # type: ignore
+class Organization(Base):  # type: ignore
     __tablename__ = "organizations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -36,6 +43,9 @@ class Organization(Base): # type: ignore
     sector = Column(String(100))
     country = Column(CHAR(2))
     plan: Any = Column(SQLEnum(*PLAN_ENUM, name="plan_type"), default="free")
+    baseline_year = Column(Integer, nullable=True)
+    target_reduction_pct = Column(Float, nullable=False, default=20.0)
+    net_zero_target_year = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -45,9 +55,11 @@ class Organization(Base): # type: ignore
     supply_chain_edges = relationship("SupplyChainEdge", back_populates="organization", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="organization", cascade="all, delete-orphan")
     ai_conversations = relationship("AIConversation", back_populates="organization", cascade="all, delete-orphan")
+    compliance_thresholds = relationship("ComplianceThreshold", back_populates="organization", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="organization", cascade="all, delete-orphan")
 
 
-class User(Base): # type: ignore
+class User(Base):  # type: ignore
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -63,7 +75,7 @@ class User(Base): # type: ignore
     ai_conversations = relationship("AIConversation", back_populates="user")
 
 
-class Supplier(Base): # type: ignore
+class Supplier(Base):  # type: ignore
     __tablename__ = "suppliers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -86,7 +98,7 @@ class Supplier(Base): # type: ignore
     emission_records = relationship("EmissionRecord", back_populates="supplier")
 
 
-class EmissionRecord(Base): # type: ignore
+class EmissionRecord(Base):  # type: ignore
     __tablename__ = "emission_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -109,7 +121,7 @@ class EmissionRecord(Base): # type: ignore
     supplier = relationship("Supplier", back_populates="emission_records")
 
 
-class SupplyChainEdge(Base): # type: ignore
+class SupplyChainEdge(Base):  # type: ignore
     __tablename__ = "supply_chain_edges"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -125,7 +137,7 @@ class SupplyChainEdge(Base): # type: ignore
     organization = relationship("Organization", back_populates="supply_chain_edges")
 
 
-class Report(Base): # type: ignore
+class Report(Base):  # type: ignore
     __tablename__ = "reports"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -135,6 +147,7 @@ class Report(Base): # type: ignore
     period_end = Column(Date, nullable=False)
     s3_url = Column(String)  # This will hold S3/storage url or locally served pdf path
     status: Any = Column(SQLEnum(*REPORT_STATUS_ENUM, name="report_status_type"), default="pending")
+    report_type: Any = Column(SQLEnum(*REPORT_TYPE_ENUM, name="report_type_enum"), default="sustainability", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -142,7 +155,7 @@ class Report(Base): # type: ignore
     user = relationship("User", back_populates="reports")
 
 
-class AIConversation(Base): # type: ignore
+class AIConversation(Base):  # type: ignore
     __tablename__ = "ai_conversations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -154,3 +167,45 @@ class AIConversation(Base): # type: ignore
     # Relationships
     organization = relationship("Organization", back_populates="ai_conversations")
     user = relationship("User", back_populates="ai_conversations")
+
+
+class ComplianceThreshold(Base):  # type: ignore
+    __tablename__ = "compliance_thresholds"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    scope: Any = Column(SQLEnum(*COMPLIANCE_SCOPE_ENUM, name="compliance_scope_type"), nullable=False)
+    threshold_tco2e = Column(Float, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        CheckConstraint("threshold_tco2e > 0", name="check_threshold_positive"),
+    )
+
+    # Relationships
+    organization = relationship("Organization", back_populates="compliance_thresholds")
+
+
+class Alert(Base):  # type: ignore
+    __tablename__ = "alerts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    alert_type: Any = Column(SQLEnum(*ALERT_TYPE_ENUM, name="alert_type_enum"), nullable=False)
+    severity: Any = Column(SQLEnum(*ALERT_SEVERITY_ENUM, name="alert_severity_enum"), nullable=False)
+    status: Any = Column(SQLEnum(*ALERT_STATUS_ENUM, name="alert_status_enum"), default="active", nullable=False)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    scope: Any = Column(SQLEnum(*COMPLIANCE_SCOPE_ENUM, name="compliance_scope_type"), nullable=True)
+    metric_value = Column(Float, nullable=True)
+    threshold_value = Column(Float, nullable=True)
+    recommendations = Column(JSONB, default=list, nullable=False)
+    period_month = Column(Date, nullable=False)
+    triggered_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    organization = relationship("Organization", back_populates="alerts")

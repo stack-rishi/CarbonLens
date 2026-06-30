@@ -5,7 +5,8 @@ import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Skeleton } from "../components/ui/skeleton";
 import { useToast } from "../hooks/use-toast";
 import { StatCard } from "../components/StatCard";
-import { Factory, Zap, Globe, BarChart3, Activity, TrendingDown } from "lucide-react";
+import { ComplianceGauge } from "../components/ComplianceGauge";
+import { Factory, Zap, Globe, BarChart3, Activity, TrendingDown, Shield } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -77,6 +78,16 @@ export default function Dashboard() {
       return res.data;
     },
     refetchInterval: 60000,
+  });
+
+  const { data: complianceStatus } = useQuery({
+    queryKey: ["compliance-status"],
+    queryFn: async () => {
+      const res = await api.get("/compliance/status");
+      return res.data;
+    },
+    refetchInterval: 15000,
+    retry: false,
   });
 
   React.useEffect(() => {
@@ -202,6 +213,60 @@ export default function Dashboard() {
           accent="#2d7a4f"
         />
       </div>
+
+      {/* ── Compliance Status Widget ──────────────────── */}
+      {complianceStatus && (
+        <Link
+          to="/compliance"
+          className="block card hover:shadow-md transition-shadow cursor-pointer"
+          style={{ border: "1px solid #d1e3d1" }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center"
+                style={{ background: "rgba(45,122,79,0.12)" }}
+              >
+                <Shield className="h-5 w-5" style={{ color: "#2d7a4f" }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "#0d1f10" }}>
+                  Compliance Status
+                </p>
+                <p className="text-xs" style={{ color: "#5a6b5a" }}>
+                  Click to view full compliance monitor →
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-xs font-medium" style={{ color: "#8a9b8a" }}>
+                  Sustainability Score
+                </p>
+                <p
+                  className="text-xl font-bold"
+                  style={{
+                    color:
+                      complianceStatus.sustainability_score >= 70
+                        ? "#22c55e"
+                        : complianceStatus.sustainability_score >= 50
+                        ? "#eab308"
+                        : "#ef4444",
+                  }}
+                >
+                  {Math.round(complianceStatus.sustainability_score)}/100
+                </p>
+              </div>
+              <div style={{ width: 100, height: 80 }}>
+                <ComplianceGauge
+                  percentage={complianceStatus.compliance_pct}
+                  status={complianceStatus.status}
+                />
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* ── Charts Row ───────────────────────────────── */}
       <div className="grid gap-4 md:grid-cols-5">

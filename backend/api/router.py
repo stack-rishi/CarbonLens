@@ -1,5 +1,6 @@
 from backend.api.ai import router as ai_router
 from backend.api.auth import router as auth_router
+from backend.api.compliance import router as compliance_router
 from backend.api.emissions import router as emissions_router
 from backend.api.forecast import router as forecast_router
 from backend.api.optimize import router as optimize_router
@@ -19,3 +20,4 @@ router.include_router(ai_router, prefix="/ai", tags=["AI Conversations"])
 router.include_router(supply_chain_router, prefix="", tags=["Supply Chain"])
 router.include_router(forecast_router, prefix="", tags=["Forecast"])
 router.include_router(optimize_router, prefix="", tags=["Optimize"])
+router.include_router(compliance_router, prefix="", tags=["Compliance"])

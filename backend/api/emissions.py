@@ -2,7 +2,7 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from backend.core.db import get_db
 from backend.models.models import EmissionRecord, Supplier
 from backend.models.schemas import EmissionRecord as EmissionRecordSchema
 from backend.models.schemas import EmissionRecordCreate
+from backend.services import alert_service
 from backend.services.emission_service import EmissionService
 
 router = APIRouter()
@@ -43,6 +44,7 @@ async def list_emissions(
 @router.post("", response_model=EmissionRecordSchema, status_code=status.HTTP_201_CREATED)
 async def create_emission_record(
     payload: EmissionRecordCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(["admin", "analyst"])),
 ) -> Any:
@@ -71,10 +73,15 @@ async def create_emission_record(
         period_end=payload.period_end,
         source=payload.source,
     )
-    
+
     db.add(record)
     await db.commit()
     await db.refresh(record)
+
+    # Real-time alert re-evaluation (non-blocking)
+    org_id = uuid.UUID(current_user.org_id)
+    background_tasks.add_task(alert_service.evaluate_and_generate_alerts, org_id, db)
+
     return record
 
 
@@ -150,8 +157,12 @@ async def get_trend(
 @router.post("/bulk-import")
 async def bulk_import_emissions(
     payload: dict[str, Any],
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(["admin", "analyst"])),
 ) -> Any:
     """Bulk import emissions."""
+    # Real-time alert re-evaluation after bulk import (non-blocking)
+    org_id = uuid.UUID(current_user.org_id)
+    background_tasks.add_task(alert_service.evaluate_and_generate_alerts, org_id, db)
     return {"status": "success", "imported_count": 0}

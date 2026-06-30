@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -24,6 +25,9 @@ class OrganizationCreate(OrganizationBase):
 class Organization(BaseSchema, OrganizationBase):
     id: UUID
     created_at: datetime
+    baseline_year: int | None = None
+    target_reduction_pct: float = 20.0
+    net_zero_target_year: int | None = None
 
 
 # User Schemas
@@ -138,6 +142,7 @@ class Report(BaseSchema, ReportBase):
     generated_by: UUID | None = None
     s3_url: str | None = None
     status: str
+    report_type: str = "sustainability"
     created_at: datetime
 
 
@@ -181,3 +186,106 @@ class RegisterRequest(BaseModel):
     org_name: str = Field(..., min_length=1, max_length=255)
     sector: str | None = Field(None, max_length=100)
     country: str | None = Field(None, max_length=2)
+
+
+# ─── Compliance / Alert Schemas ────────────────────────────────────────────────
+
+class Recommendation(BaseModel):
+    title: str
+    description: str
+    category: str
+    estimated_impact_pct: float | None = None
+
+
+class ComplianceThresholdBase(BaseModel):
+    scope: str = Field(..., pattern="^(1|2|3|total)$")
+    threshold_tco2e: float = Field(..., gt=0)
+
+
+class ComplianceThresholdCreate(ComplianceThresholdBase):
+    pass
+
+
+class ComplianceThreshold(BaseSchema, ComplianceThresholdBase):
+    id: UUID
+    org_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class ComplianceThresholdResponse(BaseModel):
+    """Single scope threshold view — includes configured flag for unconfigured scopes."""
+    scope: str
+    threshold_tco2e: float | None = None
+    configured: bool
+
+
+class ThresholdUpsertRequest(BaseModel):
+    thresholds: list[ComplianceThresholdCreate]
+
+
+class TargetUpdateRequest(BaseModel):
+    baseline_year: int | None = Field(None, ge=1990, le=2100)
+    target_reduction_pct: float | None = Field(None, ge=0, le=100)
+    net_zero_target_year: int | None = Field(None, ge=2020, le=2100)
+
+
+class ScopeBreakdown(BaseModel):
+    scope: str
+    current_tco2e: float
+    threshold_tco2e: float | None
+    pct_of_threshold: float | None
+    configured: bool
+
+
+class MonthlyEmissions(BaseModel):
+    scope1: float
+    scope2: float
+    scope3: float
+    total: float
+
+
+class AlertCounts(BaseModel):
+    low: int
+    medium: int
+    high: int
+    critical: int
+
+
+class ComplianceStatus(BaseModel):
+    status: str  # compliant | warning | critical | unconfigured
+    compliance_pct: float
+    sustainability_score: float
+    scope_breakdown: list[ScopeBreakdown]
+    current_month: MonthlyEmissions
+    previous_month: MonthlyEmissions
+    pct_change: dict[str, float]
+    active_alerts_count: AlertCounts
+    last_evaluated_at: datetime
+
+
+class AlertBase(BaseModel):
+    alert_type: str
+    severity: str
+    status: str
+    title: str
+    message: str
+    scope: str | None = None
+    metric_value: float | None = None
+    threshold_value: float | None = None
+    recommendations: list[Any] = []
+    period_month: date
+
+
+class AlertResponse(BaseSchema, AlertBase):
+    id: UUID
+    org_id: UUID
+    triggered_at: datetime
+    acknowledged_at: datetime | None = None
+    resolved_at: datetime | None = None
+    created_at: datetime
+
+
+class ComplianceReportRequest(BaseModel):
+    period_start: date | None = None
+    period_end: date | None = None
