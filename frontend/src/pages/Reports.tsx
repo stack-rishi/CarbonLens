@@ -8,6 +8,7 @@ import { formatDistanceToNow, format } from "date-fns";
 interface Report {
   id: string; period_start: string; period_end: string; s3_url: string | null;
   status: "pending" | "processing" | "done" | "failed"; created_at: string;
+  report_type?: "sustainability" | "compliance";
 }
 
 const inputStyle: React.CSSProperties = {
@@ -94,7 +95,7 @@ export default function Reports() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ background: "#eef5ee", borderBottom: "1px solid #d1e3d1" }}>
-                {["Period", "Generated", "Status", "Actions"].map((h) => (
+                {["Period", "Type", "Generated", "Status", "Actions"].map((h) => (
                   <th key={h} className="label-caps px-4 py-3 text-left last:text-right">{h}</th>
                 ))}
               </tr>
@@ -106,6 +107,15 @@ export default function Reports() {
                 return (
                   <tr key={r.id} style={{ borderBottom: "1px solid rgba(209,227,209,0.5)", transition: "background 0.12s" }} onMouseEnter={e => e.currentTarget.style.background = "#eef5ee"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                     <td className="px-4 py-3 font-semibold" style={{ color: "#0d1f10" }}>{startStr} – {endStr}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                        r.report_type === "compliance"
+                          ? "bg-[rgba(59,130,246,0.12)] text-[#2563eb] border border-[rgba(59,130,246,0.25)]"
+                          : "bg-[rgba(45,122,79,0.12)] text-[#2d7a4f] border border-[rgba(45,122,79,0.25)]"
+                      }`}>
+                        {r.report_type || "sustainability"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-xs" style={{ color: "#5a6b5a" }}>{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</td>
                     <td className="px-4 py-3">
                       {r.status === "done" && <span className="scope-badge" style={{ background: "rgba(34,197,94,0.12)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)" }}>Ready</span>}

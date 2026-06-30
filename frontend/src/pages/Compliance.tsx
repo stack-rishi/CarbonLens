@@ -36,7 +36,13 @@ const STATUS_LABELS: Record<string, { label: string; emoji: string; color: strin
 export default function Compliance() {
   const [alertFilter, setAlertFilter] = useState<string>("all");
   const [showThresholdModal, setShowThresholdModal] = useState(false);
+  const [showTargetModal, setShowTargetModal] = useState(false);
   const [thresholdInputs, setThresholdInputs] = useState<Record<string, string>>({});
+  const [targetInputs, setTargetInputs] = useState({
+    baseline_year: "",
+    target_reduction_pct: "20",
+    net_zero_target_year: "",
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -100,6 +106,20 @@ export default function Compliance() {
     },
   });
 
+  // Save targets
+  const targetMutation = useMutation({
+    mutationFn: (targets: { baseline_year?: number; target_reduction_pct?: number; net_zero_target_year?: number }) =>
+      api.put("/compliance/targets", targets),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance-status"] });
+      setShowTargetModal(false);
+      toast({ title: "Reduction targets updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to save targets", description: err.response?.data?.detail || "", variant: "destructive" });
+    },
+  });
+
   // Generate compliance report
   const reportMutation = useMutation({
     mutationFn: () => api.post("/compliance/report/generate", {}),
@@ -120,6 +140,27 @@ export default function Compliance() {
       return;
     }
     thresholdMutation.mutate(payload);
+  };
+
+  const handleSaveTargets = () => {
+    const baseline = targetInputs.baseline_year ? Number(targetInputs.baseline_year) : undefined;
+    const reduction = targetInputs.target_reduction_pct ? Number(targetInputs.target_reduction_pct) : 20.0;
+    const netZero = targetInputs.net_zero_target_year ? Number(targetInputs.net_zero_target_year) : undefined;
+
+    if (baseline && (baseline < 2000 || baseline > 2100)) {
+      toast({ title: "Invalid baseline year", variant: "destructive" });
+      return;
+    }
+    if (netZero && (netZero < 2020 || netZero > 2100)) {
+      toast({ title: "Invalid net-zero year", variant: "destructive" });
+      return;
+    }
+
+    targetMutation.mutate({
+      baseline_year: baseline,
+      target_reduction_pct: reduction,
+      net_zero_target_year: netZero,
+    });
   };
 
   const overallStatus = status?.status ?? "unconfigured";
@@ -208,6 +249,26 @@ export default function Compliance() {
           >
             <Settings className="h-4 w-4" />
             Configure Thresholds
+          </button>
+          <button
+            onClick={() => {
+              // Pre-fill targets from the compliance status or default values
+              setTargetInputs({
+                baseline_year: status?.baseline_year ? String(status.baseline_year) : "2023",
+                target_reduction_pct: status?.target_reduction_pct ? String(status.target_reduction_pct) : "20",
+                net_zero_target_year: status?.net_zero_target_year ? String(status.net_zero_target_year) : "2030",
+              });
+              setShowTargetModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{
+              background: "#e8f2e8",
+              color: "#2d7a4f",
+              border: "1px solid #d1e3d1",
+            }}
+          >
+            <Settings className="h-4 w-4" />
+            Configure Targets
           </button>
           <button
             onClick={() => reportMutation.mutate()}
@@ -548,6 +609,97 @@ export default function Compliance() {
                 style={{ background: "#2d7a4f", color: "#fff" }}
               >
                 {thresholdMutation.isPending ? "Saving…" : "Save Thresholds"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Configure Targets Modal ─────────────────── */}
+      {showTargetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowTargetModal(false)}
+          />
+          <div
+            className="relative z-50 w-full max-w-md rounded-2xl p-6 shadow-2xl"
+            style={{ background: "#fff" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold" style={{ color: "#0d1f10" }}>
+                Configure Reduction Targets
+              </h3>
+              <button
+                onClick={() => setShowTargetModal(false)}
+                className="p-1 rounded-lg"
+                style={{ color: "#94a3b8" }}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-xs mb-4" style={{ color: "#5a6b5a" }}>
+              Configure your organization's baseline carbon year and targeted net-zero milestones.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold w-32 shrink-0" style={{ color: "#0d1f10" }}>
+                  Baseline Year
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 2023"
+                  value={targetInputs.baseline_year}
+                  onChange={(e) => setTargetInputs((p) => ({ ...p, baseline_year: e.target.value }))}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ border: "1px solid #d1e3d1" }}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold w-32 shrink-0" style={{ color: "#0d1f10" }}>
+                  Reduction Goal
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 20"
+                  value={targetInputs.target_reduction_pct}
+                  onChange={(e) => setTargetInputs((p) => ({ ...p, target_reduction_pct: e.target.value }))}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ border: "1px solid #d1e3d1" }}
+                />
+                <span className="text-xs shrink-0" style={{ color: "#8a9b8a" }}>
+                  %
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold w-32 shrink-0" style={{ color: "#0d1f10" }}>
+                  Net-Zero Year
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 2030"
+                  value={targetInputs.net_zero_target_year}
+                  onChange={(e) => setTargetInputs((p) => ({ ...p, net_zero_target_year: e.target.value }))}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ border: "1px solid #d1e3d1" }}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setShowTargetModal(false)}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "#f1f5f1", color: "#374151" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTargets}
+                disabled={targetMutation.isPending}
+                className="flex-1 py-2 rounded-xl text-sm font-bold"
+                style={{ background: "#2d7a4f", color: "#fff" }}
+              >
+                {targetMutation.isPending ? "Saving…" : "Save Targets"}
               </button>
             </div>
           </div>
